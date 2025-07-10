@@ -193,6 +193,20 @@ class TestJ2Files(TestCase):
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-secondary-subnets.supervisord.conf'), self.output_file))
 
+        # Test generation of docker-dhcp-relay.supervisord.conf when sonic dhcpv4 agent is True
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay', 'docker-dhcp-relay.supervisord.conf.j2')
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'docker-dhcp-relay-sonic-agent.supervisord.conf'), self.output_file))
+
+        # Test generation of docker-dhcp-relay.supervisord.conf when sonic dhcpv4 agent is False
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-disabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay', 'docker-dhcp-relay.supervisord.conf.j2')
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'docker-dhcp-relay.supervisord.conf'), self.output_file))
+
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-router-advertiser', 'radvd.conf.j2')

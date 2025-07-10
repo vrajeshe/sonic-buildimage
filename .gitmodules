@@ -103,6 +103,10 @@
 	path = src/dhcprelay
 	url = https://github.com/vrajeshe/sonic-dhcp-relay
 	branch = cisco/dhcp_v4_dev
+[submodule "src/dhcp4relay"]
+        path = src/dhcp4relay
+        url = git@github.com:cisco-dhcp-relay/sonic-dhcp4-relay.git
+        branch = dhcp4
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
 	url = https://github.com/sonic-net/sonic-host-services

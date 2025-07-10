@@ -69,10 +69,18 @@ dependent_startup_wait_for=rsyslogd:running
         {%- include 'dhcpv4-relay.agents.j2' %}
         {%- set _ = added_vlan.append(vlan_name) %}
     {%- endif %}
+{# Decide the dhcpv4 relay agent based on the feature config #}
+{% if 'has_sonic_dhcpv4_relay' in FEATURE['dhcp_relay'] and FEATURE['dhcp_relay']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% include 'dhcpv4-sonic-relay.agents.j2' %}
+{% include 'dhcpv6-relay.agents.j2' %}
+{% else %}
+{% for vlan_name in VLAN_INTERFACE %}
+{% include 'dhcpv4-relay.agents.j2' %}
 {% endfor %}
 
 {% include 'dhcpv6-relay.agents.j2' %}
 {% include 'dhcp-relay.monitors.j2' %}
+{% endif %}
 {% endif %}
 {% endif %}
 [program:dhcprelayd]
