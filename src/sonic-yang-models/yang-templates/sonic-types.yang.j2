@@ -469,6 +469,7 @@ module sonic-types {
             enum ACL_EGRESS_SWITCH;
             enum EGRESS_VLAN_FILTER;
         }
+    }
     typedef relay-agent-mode {
         type enumeration {
             enum forward_and_append {
@@ -486,7 +487,6 @@ module sonic-types {
         }
         description "This enumeration type defines what to do about a dhcp packets that already has a relay option.";
     }
-
     {% if yang_model_type == "cvl" %}
     /* Required for CVL */
     container operation {

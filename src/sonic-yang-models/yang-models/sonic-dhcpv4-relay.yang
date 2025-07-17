@@ -64,13 +64,22 @@ module sonic-dhcpv4-relay {
 
                 leaf server_vrf {
                     description "Server VRF";
-                    type leafref {
-                        path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
                     }
-                    must "(current() = '' or (current()/../vrf_selection = 'enable' and
-                                               current()/../server_id_override = 'enable' and
-                                               current()/../link_selection = 'enable'))" {
+                    must "(current()/../vrf_selection = 'enable' and
+                           current()/../server_id_override = 'enable' and
+                           current()/../link_selection = 'enable')" {
                         description "when server_vrf set, link_selection, vrf_selection and server_id_override must be enabled";
+                    }
+                    must "current()/../vrf_selection = 'enable'" {
+                        description "if vrf_selection is enabled, server-vrf must be set";
                     }
                 }
 

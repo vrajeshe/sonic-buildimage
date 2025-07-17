@@ -1,16 +1,4 @@
 {# Append DHCPv4 sonic agent #}
-{% for vlan_name in VLAN_INTERFACE %}
-{# TODO: ananshar - Change to DHCP_RELAY when we start using that #}
-{% if VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
-{% for dhcp_server in VLAN[vlan_name]['dhcp_servers'] %}
-{% if dhcp_server | ipv4 %}
-{% set _dummy = relay_for_ipv4.update({'flag': True}) %}
-{% endif %}
-{% endfor %}
-{% endif %}
-{% endfor %}
-{% if relay_for_ipv4.flag %}
-{% set _dummy = relay_for_ipv4.update({'flag': False}) %}
 [program:dhcp4relay]
 command=/usr/sbin/dhcp4relay
 {#- Dual ToR Option #}
@@ -19,9 +7,11 @@ command=/usr/sbin/dhcp4relay
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=start:exited
 
-{% endif %}
+
