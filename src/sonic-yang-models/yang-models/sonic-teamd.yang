@@ -1,0 +1,38 @@
+module sonic-teamd {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-teamd";
+    prefix teamd;
+
+    organization "SONiC";
+    contact "SONiC";
+    description "TEAMD global configuration for SONiC";
+
+    revision 2025-05-06 {
+        description "Initial revision with only multi-process mode";
+    }
+
+    container sonic-teamd {
+        container TEAMD {
+            description "TEAMD section of config_db.json";
+
+            container GLOBAL {
+                description "Global TEAMD configuration section";
+
+                leaf mode {
+                    description "TEAMD operation mode (fixed as multi-process)";
+                    type string {
+                        pattern "multi-process";
+                    }
+                    default "multi-process";
+                    must "true()" {
+                         description "WARNING: Changing or removing the mode will require a Docker restart for the changes to take effect.";
+                    }
+                }
+            }
+            /* end of GLOBAL */
+        }
+        /* end of TEAMD */
+    }
+    /* end of sonic-teamd */
+}
