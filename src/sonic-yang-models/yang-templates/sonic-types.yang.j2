@@ -472,14 +472,11 @@ module sonic-types {
     }
     typedef relay-agent-mode {
         type enumeration {
-            enum forward_and_append {
-                description "Forward and append our own relay option";
+            enum append {
+                description "Append our own relay option";
             }
-            enum forward_and_replace {
-                description "Forward, but replace theirs with ours";
-            }
-            enum forward_untouched {
-                description "Forward without changes";
+            enum replace {
+                description "Replace theirs with ours";
             }
             enum discard {
                 description "Discard the packet";
