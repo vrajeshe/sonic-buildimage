@@ -1,6 +1,7 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/sonic-net/sonic-swss-common
+    url = https://github.com/vrajeshe/sonic-swss-common
+    branch = cisco/dhcp_v4_dev
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
@@ -30,7 +31,8 @@
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
-	url = https://github.com/sonic-net/sonic-utilities
+    url = https://github.com/vrajeshe/sonic-utilities
+    branch = cisco/dhcp_v4_dev
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
@@ -99,7 +101,8 @@
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/dhcprelay"]
 	path = src/dhcprelay
-	url = https://github.com/sonic-net/sonic-dhcp-relay.git
+    url = https://github.com/vrajeshe/sonic-dhcp-relay
+    branch = cisco/dhcp_v4_dev
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
 	url = https://github.com/sonic-net/sonic-host-services
