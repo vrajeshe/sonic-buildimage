@@ -1425,7 +1425,7 @@ index 904d76c..d43eb6c 100644
 -		 teamd_zmq_common.h
 +		 teamd_zmq_common.h teamd_timer.h teamd_utldll.h teamd_utlhash.h 
 diff --git a/teamd/teamd.c b/teamd/teamd.c
-index 5220ae2..3deba2d 100644
+index 5220ae2..8851393 100644
 --- a/teamd/teamd.c
 +++ b/teamd/teamd.c
 @@ -51,6 +51,14 @@
@@ -2340,7 +2340,7 @@ index 5220ae2..3deba2d 100644
  	teamd_phys_port_check_fini(ctx);
  	teamd_state_basics_fini(ctx);
  	teamd_runner_fini(ctx);
-@@ -1496,19 +1584,89 @@ static void teamd_fini(struct teamd_context *ctx)
+@@ -1496,19 +1584,90 @@ static void teamd_fini(struct teamd_context *ctx)
  	teamd_state_fini(ctx);
  	teamd_ifinfo_watch_fini(ctx);
  	teamd_option_watch_fini(ctx);
@@ -2413,12 +2413,13 @@ index 5220ae2..3deba2d 100644
 +		teamd_log_err("Failed to init 1sec timer.");
 +		return err;
 +	}
-+
++#ifdef MS_TIMER_ENABLED
 +	err = _teamd_timer_init(g_ctx, TIMER_TYPE_MS, TEAMD_100MS_TIMER_CB_NAME);
 +	if (err) {
 +		teamd_log_err("Failed to init 100ms timer.");
 +		return err;
 +	}
++#endif
 +
 +	return 0;
 +}
@@ -2432,7 +2433,7 @@ index 5220ae2..3deba2d 100644
  
  	if (getuid() == 0)
  		teamd_log_warn("This program is not intended to be run as root.");
-@@ -1531,7 +1689,7 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+@@ -1531,7 +1690,7 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  		return -EEXIST;
  	}
  
@@ -2441,7 +2442,7 @@ index 5220ae2..3deba2d 100644
  		daemon_retval_init();
  
  		pid = daemon_fork();
-@@ -1557,13 +1715,13 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+@@ -1557,13 +1716,13 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  	/* Child */
  	}
  
@@ -2460,7 +2461,7 @@ index 5220ae2..3deba2d 100644
  			daemon_log_use = DAEMON_LOG_SYSLOG;
  	}
  
-@@ -1586,27 +1744,104 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+@@ -1586,27 +1745,104 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  		goto pid_file_remove;
  	}
  
@@ -2573,7 +2574,7 @@ index 5220ae2..3deba2d 100644
  pid_file_remove:
  	daemon_pid_file_remove();
  
-@@ -1676,11 +1911,6 @@ static int teamd_get_devname(struct teamd_context *ctx, bool generate_enabled)
+@@ -1676,11 +1912,6 @@ static int teamd_get_devname(struct teamd_context *ctx, bool generate_enabled)
  skip_set:
  	teamd_log_dbg(ctx, "Using team device \"%s\".", ctx->team_devname);
  
@@ -2585,7 +2586,7 @@ index 5220ae2..3deba2d 100644
  	return 0;
  }
  
-@@ -1689,30 +1919,72 @@ static int teamd_set_default_pid_file(struct teamd_context *ctx)
+@@ -1689,30 +1920,72 @@ static int teamd_set_default_pid_file(struct teamd_context *ctx)
  	int err;
  
  	/* Generate PID filename only if it was not set on command line */
@@ -2664,7 +2665,7 @@ index 5220ae2..3deba2d 100644
  {
  	struct teamd_context *ctx;
  
-@@ -1720,21 +1992,18 @@ static int teamd_context_init(struct teamd_context **pctx)
+@@ -1720,21 +1993,18 @@ static int teamd_context_init(struct teamd_context **pctx)
  	if (!ctx)
  		return -ENOMEM;
  	*pctx = ctx;
@@ -2693,7 +2694,7 @@ index 5220ae2..3deba2d 100644
  }
  
  
-@@ -1831,7 +2100,9 @@ int main(int argc, char **argv)
+@@ -1831,7 +2101,9 @@ int main(int argc, char **argv)
  {
  	enum teamd_exit_code ret = TEAMD_EXIT_FAILURE;
  	int err;
@@ -2704,7 +2705,7 @@ index 5220ae2..3deba2d 100644
  
  	err = teamd_make_rundir();
  	if (err)
-@@ -1841,25 +2112,32 @@ int main(int argc, char **argv)
+@@ -1841,25 +2113,32 @@ int main(int argc, char **argv)
  	if (err)
  		return ret;
  
@@ -2740,7 +2741,7 @@ index 5220ae2..3deba2d 100644
  		ret = TEAMD_EXIT_SUCCESS;
  		goto context_fini;
  	case DAEMON_CMD_KILL:
-@@ -1868,10 +2146,10 @@ int main(int argc, char **argv)
+@@ -1868,10 +2147,10 @@ int main(int argc, char **argv)
  		break;
  	}
  
@@ -2753,7 +2754,7 @@ index 5220ae2..3deba2d 100644
  
  	err = teamd_config_load(ctx);
  	if (err) {
-@@ -1881,22 +2159,31 @@ int main(int argc, char **argv)
+@@ -1881,22 +2160,31 @@ int main(int argc, char **argv)
  
  	teamd_init_debug_level(ctx);
  
@@ -2790,7 +2791,7 @@ index 5220ae2..3deba2d 100644
  	case DAEMON_CMD_HELP:
  	case DAEMON_CMD_VERSION:
  		break;
-@@ -1925,9 +2212,19 @@ int main(int argc, char **argv)
+@@ -1925,9 +2213,19 @@ int main(int argc, char **argv)
  		break;
  	}
  
@@ -2811,7 +2812,7 @@ index 5220ae2..3deba2d 100644
  	return ret;
  }
 diff --git a/teamd/teamd.h b/teamd/teamd.h
-index d1d0f7f..b023660 100644
+index d1d0f7f..8767564 100644
 --- a/teamd/teamd.h
 +++ b/teamd/teamd.h
 @@ -33,10 +33,13 @@
@@ -3026,6 +3027,18 @@ index d1d0f7f..b023660 100644
  
  /* Runner structures */
  extern const struct teamd_runner teamd_runner_broadcast;
+@@ -399,6 +439,11 @@ static inline void ms_to_timespec(struct timespec *ts, int ms)
+ 
+ static inline int timespec_to_ms(struct timespec *ts)
+ {
++#ifndef MS_TIMER_ENABLED
++	/* If the timer is in seconds, and the nanoseconds is not zero, then it is a 1 second timer */
++	if(ts->tv_sec == 0 && ts->tv_nsec != 0)
++		return 1000;
++#endif
+ 	return ts->tv_sec * 1000 + ts->tv_nsec / 1000000;
+ }
+ 
 diff --git a/teamd/teamd_config.c b/teamd/teamd_config.c
 index 610ad5f..d2b6eef 100644
 --- a/teamd/teamd_config.c
@@ -3777,7 +3790,7 @@ index ea7ef87..f340bc7 100644
  
  int __set_sockaddr(struct sockaddr *sa, socklen_t sa_len, sa_family_t family,
 diff --git a/teamd/teamd_lw_ethtool.c b/teamd/teamd_lw_ethtool.c
-index b44656e..4be1d1a 100644
+index b44656e..25bfe69 100644
 --- a/teamd/teamd_lw_ethtool.c
 +++ b/teamd/teamd_lw_ethtool.c
 @@ -22,7 +22,7 @@
@@ -3842,7 +3855,7 @@ index b44656e..4be1d1a 100644
  					      link_up);
  }
  
-@@ -139,18 +139,20 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
+@@ -139,18 +139,27 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
  				 void *priv, void *creator_priv)
  {
  	int err;
@@ -3859,7 +3872,14 @@ index b44656e..4be1d1a 100644
 -		teamd_log_err("Failed add delay callback timer");
 -		return err;
 +
-+	ethtool_ppriv->delay_timer = tmr_create_timer(priv, lw_ethtool_callback_delay, TRUE, TIMER_TYPE_MS);
++	ethtool_ppriv->delay_timer = tmr_create_timer(priv, lw_ethtool_callback_delay, TRUE, 
++#ifdef MS_TIMER_ENABLED
++		TIMER_TYPE_MS
++#else
++		TIMER_TYPE_SEC
++#endif
++		);
++
 +	if (!ethtool_ppriv->delay_timer) {
 +		teamd_log_err("Failed to create delay callback timer");
 +		return -ENOMEM;
@@ -3868,7 +3888,7 @@ index b44656e..4be1d1a 100644
  	err = teamd_event_watch_register(ctx, &lw_ethtool_port_watch_ops, priv);
  	if (err) {
  		teamd_log_err("Failed to register event watch.");
-@@ -159,7 +161,7 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
+@@ -159,7 +168,7 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
  	return 0;
  
  delay_callback_del:
@@ -3877,7 +3897,7 @@ index b44656e..4be1d1a 100644
  	return err;
  }
  
-@@ -167,8 +169,10 @@ static void lw_ethtool_port_removed(struct teamd_context *ctx,
+@@ -167,8 +176,10 @@ static void lw_ethtool_port_removed(struct teamd_context *ctx,
  				    struct teamd_port *tdport,
  				    void *priv, void *creator_priv)
  {
@@ -3890,7 +3910,7 @@ index b44656e..4be1d1a 100644
  
  static int lw_ethtool_state_delay_up_get(struct teamd_context *ctx,
 diff --git a/teamd/teamd_lw_psr.c b/teamd/teamd_lw_psr.c
-index b0a41f4..09b7c4f 100644
+index b0a41f4..c1d7a12 100644
 --- a/teamd/teamd_lw_psr.c
 +++ b/teamd/teamd_lw_psr.c
 @@ -32,7 +32,7 @@ static const struct timespec lw_psr_default_init_wait = { 0, 1 };
@@ -3936,7 +3956,7 @@ index b0a41f4..09b7c4f 100644
  					 lw_psr_callback_socket,
  					 psr_ppriv->sock,
  					 TEAMD_LOOP_FD_EVENT_READ);
-@@ -152,13 +152,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+@@ -152,13 +152,20 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
  		goto close_sock;
  	}
  
@@ -3945,7 +3965,13 @@ index b0a41f4..09b7c4f 100644
 -						lw_psr_callback_periodic,
 -						&psr_ppriv->interval,
 -						&psr_ppriv->init_wait);
-+	psr_ppriv->periodic_timer = tmr_create_timer(psr_ppriv, lw_psr_callback_periodic, TRUE, TIMER_TYPE_MS);
++	psr_ppriv->periodic_timer = tmr_create_timer(psr_ppriv, lw_psr_callback_periodic, TRUE, 
++#ifdef MS_TIMER_ENABLED
++		TIMER_TYPE_MS
++#else
++		TIMER_TYPE_SEC
++#endif
++		);
 +	if (!psr_ppriv->periodic_timer) {
 +		teamd_log_err("Failed to create periodic callback timer");
 +		return -ENOMEM;
@@ -3957,7 +3983,7 @@ index b0a41f4..09b7c4f 100644
  		goto socket_callback_del;
  	}
  
-@@ -169,14 +170,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+@@ -169,14 +176,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
  		goto periodic_callback_del;
  	}
  
@@ -3976,7 +4002,7 @@ index b0a41f4..09b7c4f 100644
  close_sock:
  	psr_ppriv->ops->sock_close(psr_ppriv);
  	return err;
-@@ -187,8 +188,8 @@ void lw_psr_port_removed(struct teamd_context *ctx, struct teamd_port *tdport,
+@@ -187,8 +194,8 @@ void lw_psr_port_removed(struct teamd_context *ctx, struct teamd_port *tdport,
  {
  	struct lw_psr_port_priv *psr_ppriv = priv;
  
@@ -4677,10 +4703,10 @@ index 0714880..52ead2e 100644
  
 diff --git a/teamd/teamd_timer.c b/teamd/teamd_timer.c
 new file mode 100644
-index 0000000..6abee07
+index 0000000..97a866e
 --- /dev/null
 +++ b/teamd/teamd_timer.c
-@@ -0,0 +1,407 @@
+@@ -0,0 +1,411 @@
 +#include "teamd_timer.h"
 +#include <stdio.h>
 +#include <stdlib.h>
@@ -4810,7 +4836,9 @@ index 0000000..6abee07
 +
 +int tmr_init(void) {
 +    _tmr_init(TIMER_TYPE_SEC, TMR_WHEEL_SIZE_SECS);
++#ifdef MS_TIMER_ENABLED
 +    _tmr_init(TIMER_TYPE_MS, TMR_WHEEL_SIZE_MS);
++#endif
 +    return 0;
 +}
 +
@@ -4844,7 +4872,9 @@ index 0000000..6abee07
 +}
 +
 +void tmr_cleanup(void) {
++#ifdef MS_TIMER_ENABLED
 +    _tmr_cleanup(TIMER_TYPE_MS);
++#endif
 +    _tmr_cleanup(TIMER_TYPE_SEC);
 +}
 +
