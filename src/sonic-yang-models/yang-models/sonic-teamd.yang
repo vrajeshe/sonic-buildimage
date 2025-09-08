@@ -9,7 +9,7 @@ module sonic-teamd {
     description "TEAMD global configuration for SONiC";
 
     revision 2025-05-06 {
-        description "Initial revision with only multi-process mode";
+        description "Support multi-process and unified-process operation modes";
     }
 
     container sonic-teamd {
@@ -20,13 +20,20 @@ module sonic-teamd {
                 description "Global TEAMD configuration section";
 
                 leaf mode {
-                    description "TEAMD operation mode (fixed as multi-process)";
-                    type string {
-                        pattern "multi-process";
+                    description "TEAMD operation mode (multi-process or unified-process)";
+                    type enumeration {
+                        enum multi-process {
+                            description "Traditional multi-process mode (one teamd per PortChannel)";
+                        }
+                        enum unified-process {
+                            description "Unified single-process mode (one teamd manages all PortChannels)";
+                        }
                     }
                     default "multi-process";
                     must "true()" {
-                         description "WARNING: Changing or removing the mode will require a Docker restart for the changes to take effect.";
+                        description
+                          "WARNING: Changing the mode requires a Docker restart
+                           for the changes to take effect.";
                     }
                 }
             }
