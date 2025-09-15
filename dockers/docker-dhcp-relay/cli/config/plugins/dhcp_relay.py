@@ -599,11 +599,14 @@ def add_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
     # Verify all ip addresses are valid and not exist in DB
     dhcp_servers = vlan.get('dhcp_servers', [])
     dhcpv6_servers = vlan.get('dhcpv6_servers', [])
+    # Track if we need to update DHCPV4_RELAY table
+    relay_entry = db.cfgdb.get_entry('DHCPV4_RELAY', vlan_name)
+    dhcpv4_servers = relay_entry.get('dhcpv4_servers', []) if relay_entry else []
 
     for ip_addr in dhcp_relay_destination_ips:
         try:
             ipaddress.ip_address(ip_addr)
-            if (ip_addr in dhcp_servers) or (ip_addr in dhcpv6_servers):
+            if (ip_addr in dhcp_servers) or (ip_addr in dhcpv6_servers) or (ip_addr in dhcpv4_servers):
                 click.echo("{} is already a DHCP relay destination for {}".format(ip_addr, vlan_name))
                 continue
             if clicommon.ipaddress_type(ip_addr) == 4:
@@ -613,31 +616,24 @@ def add_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
                 if not check_sonic_dhcpv4_relay_flag(db):
                     dhcp_servers.append(ip_addr)
                 else:
-                    dhcpv4_relay_servers.append(ip_addr)
+                    dhcpv4_servers.append(ip_addr)
             else:
                 dhcpv6_servers.append(ip_addr)
             added_servers.append(ip_addr)
         except Exception:
             ctx.fail('{} is invalid IP address'.format(ip_addr))
 
-    # Append new dhcp servers to config DB
-    if len(dhcp_servers):
-        vlan['dhcp_servers'] = dhcp_servers
-    if len(dhcpv6_servers):
-        vlan['dhcpv6_servers'] = dhcpv6_servers
-
     ip_version = IPV4 if clicommon.ipaddress_type(ip_addr) == 4 else IPV6
     if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
-        if dhcpv4_relay_servers:
-            relay_entry = db.cfgdb.get_entry('DHCPV4_RELAY', vlan_name)
-        existing = relay_entry.get('dhcpv4_servers', [])
-        # Ensure no duplicates
-        for ip in dhcpv4_relay_servers:
-            if ip not in existing:
-                existing.append(ip)
-        relay_entry['dhcpv4_servers'] = existing
+        if len(dhcpv4_servers):
+            relay_entry['dhcpv4_servers'] = dhcpv4_servers
         db.cfgdb.set_entry('DHCPV4_RELAY', vlan_name, relay_entry)
     else:
+        # Append new dhcp servers to config DB
+        if len(dhcp_servers):
+            vlan['dhcp_servers'] = dhcp_servers
+        if len(dhcpv6_servers):
+            vlan['dhcpv6_servers'] = dhcpv6_servers
         db.cfgdb.set_entry('VLAN', vlan_name, vlan)
 
     if len(added_servers):
@@ -690,19 +686,6 @@ def del_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
         else:
             dhcpv6_servers.remove(ip_addr)
 
-    # Update dhcp servers to config DB
-    if len(dhcp_servers):
-        vlan['dhcp_servers'] = dhcp_servers
-    else:
-        if 'dhcp_servers' in vlan.keys():
-            del vlan['dhcp_servers']
-
-    if len(dhcpv6_servers):
-        vlan['dhcpv6_servers'] = dhcpv6_servers
-    else:
-        if 'dhcpv6_servers' in vlan.keys():
-            del vlan['dhcpv6_servers']
-
     ip_version = IPV4 if clicommon.ipaddress_type(ip_addr) == 4 else IPV6
     # Update DHCPV4_RELAY table if needed
     if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db) :
@@ -713,6 +696,18 @@ def del_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
                 relay_entry['dhcpv4_servers'] = dhcpv4_servers
                 db.cfgdb.set_entry('DHCPV4_RELAY', vlan_name, relay_entry)
     else:
+        # Update dhcp servers to config DB
+        if len(dhcp_servers):
+            vlan['dhcp_servers'] = dhcp_servers
+        else:
+            if 'dhcp_servers' in vlan.keys():
+                del vlan['dhcp_servers']
+
+        if len(dhcpv6_servers):
+            vlan['dhcpv6_servers'] = dhcpv6_servers
+        else:
+            if 'dhcpv6_servers' in vlan.keys():
+                del vlan['dhcpv6_servers']
         db.cfgdb.set_entry('VLAN', vlan_name, vlan)
     click.echo("Removed DHCP relay destination addresses {} from {}".format(dhcp_relay_destination_ips, vlan_name))
     try:
