@@ -1343,7 +1343,7 @@ index a5eb0be..f748276 100644
  int port_list_alloc(struct team_handle *th);
  int port_list_init(struct team_handle *th);
 diff --git a/libteamdctl/cli_usock.c b/libteamdctl/cli_usock.c
-index d3fbdba..5a017c7 100644
+index d3fbdba..0034d1e 100644
 --- a/libteamdctl/cli_usock.c
 +++ b/libteamdctl/cli_usock.c
 @@ -164,8 +164,9 @@ static int cli_usock_method_call(struct teamdctl *tdc, const char *method_name,
@@ -1358,23 +1358,33 @@ index d3fbdba..5a017c7 100644
  	if (err)
  		return err;
  	while (*fmt) {
-@@ -234,6 +235,7 @@ static int cli_usock_init(struct teamdctl *tdc, const char *team_name,
+@@ -234,7 +235,8 @@ static int cli_usock_init(struct teamdctl *tdc, const char *team_name,
  	addr.sun_family = AF_UNIX;
  	teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
  				 team_name);
-+	tdc->team_name = team_name;
- 
+-
++	strncpy(tdc->team_name, team_name, IFNAMSIZ);
++	tdc->team_name[IFNAMSIZ] = '\0';
  	cli_usock->sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
  	if (cli_usock->sock == -1) {
+ 		err(tdc, "usock: Failed to create socket.");
 diff --git a/libteamdctl/teamdctl_private.h b/libteamdctl/teamdctl_private.h
-index 641255c..885ff8f 100644
+index 641255c..572eb88 100644
 --- a/libteamdctl/teamdctl_private.h
 +++ b/libteamdctl/teamdctl_private.h
-@@ -45,6 +45,7 @@ struct teamdctl {
+@@ -23,6 +23,7 @@
+ #include <stdbool.h>
+ #include <syslog.h>
+ #include <private/list.h>
++#include <linux/if.h>
+ #include <teamdctl.h>
+ 
+ #include "config.h"
+@@ -45,6 +46,7 @@ struct teamdctl {
  	const struct teamdctl_cli *cli;
  	void *cli_priv;
  	struct list_item reply_cache_list;
-+	const char * team_name;
++	char team_name[IFNAMSIZ+1];
  };
  
  struct teamdctl_reply_cache_item {
