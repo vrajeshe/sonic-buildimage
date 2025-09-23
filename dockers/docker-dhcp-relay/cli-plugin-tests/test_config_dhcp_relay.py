@@ -174,7 +174,7 @@ class TestConfigDhcpRelay(object):
         invalid_ip = IP_VER_TEST_PARAM_MAP[version]["invalid_ip"]
         ip_version = "ipv6" if version == "ipv6" else "ipv4"
         if version == "ipv4_dhvp":
-            db.cfgdb.set_entry('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'})
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
                                    .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
@@ -192,10 +192,7 @@ class TestConfigDhcpRelay(object):
         exist_ip = IP_VER_TEST_PARAM_MAP[version]["exist_ip"]
         ip_version = "ipv6" if version == "ipv6" else "ipv4"
         if version == "ipv4_dhcp":
-            db.cfgdb.set_entry('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'})
-        table = db.cfgdb.get_entry("FEATURE", "dhcp_relay")
-        if('has_sonic_dhcpv4_relay' in table and table['has_sonic_dhcpv4_relay'] == 'True'):
-            print("has_sonic_dhcpv4_relay is set")
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
                                    .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
@@ -217,7 +214,7 @@ class TestConfigDhcpRelay(object):
         nonexist_ip = IP_VER_TEST_PARAM_MAP[version]["nonexist_ip"]
         ip_version = "ipv6" if version == "ipv6" else "ipv4"
         if version == "ipv4_dhcp":
-            db.cfgdb.set_entry('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'})
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
@@ -243,7 +240,7 @@ class TestConfigDhcpRelay(object):
         config_db_table = IP_VER_TEST_PARAM_MAP[version]["table"]
 
         if version == "ipv4_dhcp":
-            db.cfgdb.set_entry('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'})
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
             dhcp4_config_db_table = IP_VER_TEST_PARAM_MAP["ipv4_dhcp"]["table"]
             op = "update"
         else:
@@ -266,7 +263,7 @@ class TestConfigDhcpRelay(object):
             if version == "ipv4_dhcp" :
                 assert result.output == config_dhcp_relay_update_output.format(test_ip)
                 expected_calls = [
-                    mock.call('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'}),
+                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'}),
                     mock.call(dhcp4_config_db_table, "Vlan1000", expected_dhcp_relay_add_config_db_output["ipv4_dhcp"])
                 ]
 
@@ -341,7 +338,7 @@ class TestConfigDhcpRelay(object):
         ip_version = "ipv6" if version == "ipv6" else "ipv4"
 
         if version == "ipv4_dhcp" :
-            db.cfgdb.set_entry('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'})
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
             dhcp4_config_db_table = IP_VER_TEST_PARAM_MAP["ipv4_dhcp"]["table"]
             op = "update"
         else:
@@ -364,7 +361,7 @@ class TestConfigDhcpRelay(object):
             if version == "ipv4_dhcp" :
                 assert result.output == config_dhcp_relay_update_output.format(",".join(test_ips))
                 expected_calls = [
-                    mock.call('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'}),
+                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'}),
                     mock.call(dhcp4_config_db_table, "Vlan1000", expected_dhcp_relay_add_multi_config_db_output["ipv4_dhcp"]),
                 ]
 
@@ -409,7 +406,7 @@ class TestConfigDhcpRelay(object):
         ip_version = "ipv6" if version == "ipv6" else "ipv4"
 
         if version == "ipv4_dhcp" :
-            db.cfgdb.set_entry('FEATURE', 'dhcp_relay', {'has_sonic_dhcpv4_relay': 'True'})
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
@@ -455,7 +452,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #set feature flag
-        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
+        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "True"})
         db.cfgdb.set_entry("DHCPV4_RELAY", "Vlan1000", None)
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -499,7 +496,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #set feature flag
-        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
+        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "True"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # Present delete cmd should work with new feature flag enabled
@@ -521,7 +518,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #unset feature flag
-        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "False"})
+        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "False"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
 
@@ -555,7 +552,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #set feature flag
-        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay":"True"})
+        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay":"True"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # Updating parameters also should work with new feature flag set
@@ -587,7 +584,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #unset feature flag
-        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay":"False"})
+        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay":"False"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # Update cmd is available only for new feature, it should NOT work when flag is disabled
