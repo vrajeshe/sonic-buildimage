@@ -1,68 +1,85 @@
-#!/bin/bash
-## Function Definitions
-
-## Function: trap_push 'COMMAND_STRING'
-## Appends a command to a trap, which is needed because default trap behavior is to replace
-## previous trap for the same signal
-## - 1st arg:  code to add
-## - ref: http://stackoverflow.com/questions/3338030/multiple-bash-traps-for-the-same-signal
-_trap_push() {
-    local next="$1"
-    eval "trap_push() {
-        local oldcmd='$(echo "$next" | sed -e s/\'/\'\\\\\'\'/g)'
-        local newcmd=\"\$1; \$oldcmd\"
-        trap -- \"\$newcmd\" EXIT INT TERM HUP
-        _trap_push \"\$newcmd\"
-    }"
-}
-_trap_push true
-
-## Function: warn MESSAGE
-## Print message to stderr
-warn() {
-    local message="$1"
-    echo "$message" >&2
-}
-
-## Function: die MESSAGE
-## Print message to stderr and exit the whole process
-## Note:
-##   Using () makes the command inside them run in a sub-shell and calling a exit from there
-##   causes you to exit the sub-shell and not your original shell, hence execution continues in
-##   your original shell. To overcome this use { }
-## ref: http://stackoverflow.com/questions/3822621/how-to-exit-if-a-command-failed
-die() {
-    local message="$1"
-    warn "$message"
-    exit 1
-}
-
-docker_try_rmi() {
-    local image_name="$1"
-    ## Note: inspect output has quotation characters, so sed to remove it as an argument
-    local image_id=$(docker inspect --format="{{json .Id}}" $image_name | sed -e 's/^"//' -e 's/"$//')
-    [ -z "$image_id" ] || {
-        ## Remove all the exited containers from this image
-        docker ps -a -q -f "status=exited" -f "ancestor=$1" | xargs --no-run-if-empty docker rm
-        ## Note: If there are running containers from this image, the build system is in an
-        ##   unexpected state. The 'rmi' will fail and we need investigate the build environment.
-        docker rmi $image_name
-    }
-}
-
-sonic_get_version() {
-    local describe=$(git describe --tags 2>/dev/null)
-    local latest_tag=$(git describe --tags --abbrev=0 2>/dev/null)
-    local branch_name=$(git rev-parse --abbrev-ref HEAD)
-    if [ -n "$(git status --untracked-files=no -s --ignore-submodules)" ]; then
-        local dirty="-dirty-$BUILD_TIMESTAMP"
-    fi
-    BUILD_NUMBER=${BUILD_NUMBER:-0}
-    ## Check if we are on tagged commit
-    ## Note: escape the version string by sed: / -> _
-    if [ -n "$latest_tag" ] && [ "$describe" == "$latest_tag" ]; then
-        echo "${latest_tag}${dirty}" | sed 's/\//_/g'
-    else
-        echo "${branch_name}.${BUILD_NUMBER}${dirty:--$(git rev-parse --short HEAD)}" | sed 's/\//_/g'
-    fi
-}
+diff --git a/dockers/docker-fpm-frr/docker_init.sh b/dockers/docker-fpm-frr/docker_init.sh
+index b66736e12..f3ecb2d6f 100755
+--- a/dockers/docker-fpm-frr/docker_init.sh
++++ b/dockers/docker-fpm-frr/docker_init.sh
+@@ -67,8 +67,12 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
+     write_default_zebra_config /etc/frr/frr.conf
+ elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE" == "separated" ]; then
+     if [ "$CONFIG_TYPE" == "separated" ]; then
+-        logger -t docker-fpm-frr -p user.warning "Config Type 'separated' is deprecated. The system will use unified mode instead."
+-        echo "Config Type separated is not supported"
++        logger -t docker-fpm-frr -p user.warning "Config Type 'separated' is deprecated. Migrating to 'unified'."
++        # Persist the migration in CONFIG_DB so the rest of the system (tests,
++        # bgpcfgd, sonic-utilities) agrees with the runtime layout.
++        sonic-db-cli CONFIG_DB hset 'DEVICE_METADATA|localhost' docker_routing_config_mode unified >/dev/null 2>&1 || true
++        CONFIG_TYPE=unified
++        FRR_VARS=$(echo "$FRR_VARS" | jq -c '.docker_routing_config_mode = "unified"')
+     fi
+     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
+     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
+@@ -82,6 +86,7 @@ elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE
+         CFGGEN_PARAMS=" \
+             -d \
+             -y /etc/sonic/constants.yml \
++            -T /usr/local/sonic/frrcfgd \
+             -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
+         "
+     fi
+diff --git a/dockers/docker-fpm-frr/frr/bgpd/bgpd.conf.j2 b/dockers/docker-fpm-frr/frr/bgpd/bgpd.conf.j2
+index 7bcffa777..85182e543 100644
+--- a/dockers/docker-fpm-frr/frr/bgpd/bgpd.conf.j2
++++ b/dockers/docker-fpm-frr/frr/bgpd/bgpd.conf.j2
+@@ -15,10 +15,10 @@
+ agentx
+ !
+ {% if DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
+-{%  include "bgpd/bgpd.spine_chassis_frontend_router.conf.j2" %}
++{%  include "bgpd.spine_chassis_frontend_router.conf.j2" %}
+ {% endif %}
+ !
+-{% include "bgpd/bgpd.main.conf.j2" %}
++{% include "bgpd.main.conf.j2" %}
+ !
+ ! end of template: bgpd/bgpd.conf.j2
+ !
+diff --git a/dockers/docker-fpm-frr/frr/gen_frr.conf.j2 b/dockers/docker-fpm-frr/frr/gen_frr.conf.j2
+index bd197480f..181437da0 100644
+--- a/dockers/docker-fpm-frr/frr/gen_frr.conf.j2
++++ b/dockers/docker-fpm-frr/frr/gen_frr.conf.j2
+@@ -1,13 +1,5 @@
+-{# Note: This template replaces the old frr.conf.j2 which included specific sub-components directly.
+-     The new approach includes the main daemon config files (zebra.conf.j2, staticd.conf.j2, bgpd.conf.j2)
+-     which in turn include the same sub-components. This provides equivalent configuration with
+-     better modularity. Each daemon config includes common/daemons.common.conf.j2, which is safe
+-     as it contains daemon-agnostic configuration. #}
+ {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+     {% include "/usr/local/sonic/frrcfgd/frr.conf.j2" %}
+ {% else %}
+-    {% include "/usr/share/sonic/templates/zebra/zebra.conf.j2" %}
+-    {% include "/usr/share/sonic/templates/staticd/staticd.conf.j2" %}
+-    {% include "/usr/share/sonic/templates/bgpd/bgpd.conf.j2" %}
+-    {% include "/usr/share/sonic/templates/sharpd/sharpd.conf.j2" %}
++    {% include "/usr/share/sonic/templates/frr.conf.j2" %}
+ {% endif %}
+diff --git a/dockers/docker-fpm-frr/frr/staticd/staticd.conf.j2 b/dockers/docker-fpm-frr/frr/staticd/staticd.conf.j2
+index 5eb26caab..6d00ac660 100644
+--- a/dockers/docker-fpm-frr/frr/staticd/staticd.conf.j2
++++ b/dockers/docker-fpm-frr/frr/staticd/staticd.conf.j2
+@@ -8,5 +8,5 @@
+ !
+ {% include "common/daemons.common.conf.j2" %}
+ !
+-{% include "staticd/staticd.loopback_route.conf.j2" %}
++{% include "staticd.loopback_route.conf.j2" %}
+ !
+diff --git a/dockers/docker-fpm-frr/frr/zebra/zebra.conf.j2 b/dockers/docker-fpm-frr/frr/zebra/zebra.conf.j2
+index 95f969cbf..13b47b882 100644
+--- a/dockers/docker-fpm-frr/frr/zebra/zebra.conf.j2
++++ b/dockers/docker-fpm-frr/frr/zebra/zebra.conf.j2
+@@ -31,5 +31,5 @@ zebra nexthop-group keep 1
+ !
+ {% include "common/daemons.common.conf.j2" %}
+ !
+-{% include "zebra/zebra.interfaces.conf.j2" %}
++{% include "zebra.interfaces.conf.j2" %}
+ !
